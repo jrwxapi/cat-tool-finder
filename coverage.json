@@ -1,0 +1,39 @@
+{
+  "products": 915,
+  "priced": 913,
+  "fullDescriptions": 108,
+  "catalogMatched": 448,
+  "catalogSupplemented": 346,
+  "catalogConflicts": [
+    {
+      "id": "214-6607",
+      "conflicts": [
+        "depth: website Deep; 2008 catalog Shallow"
+      ]
+    }
+  ],
+  "withoutPrice": [
+    "385-8586",
+    "456-2109"
+  ],
+  "classified": {
+    "drive": 741,
+    "points": 536,
+    "depth": 554,
+    "system": 702
+  },
+  "types": {
+    "Adapter": 32,
+    "Bit / driver": 2,
+    "Bit set": 2,
+    "Breaker bar": 5,
+    "Extension": 22,
+    "Other": 8,
+    "Ratchet": 41,
+    "Ratchet set": 3,
+    "Socket": 748,
+    "Socket set": 50,
+    "Tool set": 1,
+    "Universal joint": 1
+  }
+}

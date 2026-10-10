@@ -1,0 +1,45 @@
+'use strict';
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const {classify,matches}=require('./catalog-core.js');
+const sample=(title,attributes={},description='')=>classify({id:'TEST-1',title:'TEST-1: '+title,description,attributes,priceText:'$12.34 USD',url:'https://parts.cat.com/en/petersonmachinery/product/TEST-1'});
+const a=sample('3/8" Drive 12-Point Deep Impact Socket',{'Size (mm)':'10'});
+assert.deepEqual(a.drive,['3/8']);assert.deepEqual(a.points,['12']);assert.deepEqual(a.depth,['Deep']);assert.deepEqual(a.system,['Metric']);
+assert(matches(a,{drive:['3/8'],points:['12'],depth:['Deep'],system:['Metric'],max:15}));
+assert(!matches(a,{drive:['1/2']}));assert(!matches(a,{max:10}));
+assert.deepEqual(sample('1/2" Hexagonal Socket').drive,[],'Fastener size must not become drive size');
+assert.deepEqual(sample('1-1/2" Square Drive Socket').drive,['1 1/2'],'Mixed-number drive sizes must not be truncated');
+assert.deepEqual(sample('Individual Fractional Sockets, 1/4 through 1 1/2 inch Drive').drive,[],'A category-wide drive range is not a product specification');
+assert.deepEqual(sample('Ratchet',{'Square Drive (in)':'0.375','Number of Teeth':'72'}).points,[]);
+assert.deepEqual(sample('Ratchet',{'Square Drive (in)':'0.375','Number of Teeth':'72'}).drive,['3/8']);
+assert.deepEqual(sample('44.45mm Long Socket').system,[],'Metric overall length does not establish metric fastener size');
+assert.deepEqual(sample('Socket',{'Size (in)':'3/4'}).system,['SAE']);
+assert.deepEqual(sample('Socket').depth,[],'Omitting deep must not imply shallow');
+assert.deepEqual(sample('Double Hexagonal Socket').points,['12']);
+assert.deepEqual(sample('Six-Point Socket').points,['6']);
+assert.deepEqual(sample('Flank Drive Single Hexagonal Socket').points,['6']);
+assert.equal(sample('11 Piece 1/2" Drive Impact Socket').type,'Socket set');
+assert.equal(sample('Shallow Impact Socket',{},'Cat impact socket set for maintenance.').type,'Socket','A conflicting generic summary must not turn a single socket into a set');
+assert.deepEqual(sample('Socket Set',{'Drive (in)':'0.250 , 0.375'}).drive,['1/4','3/8']);
+assert.deepEqual(sample('Socket',{'Square Drive (mm)':'12.7'}).drive,['1/2']);
+assert.equal(sample('12mm 6-Point Socket',{'Hex Size (in)':'0.472'}).size,'12 mm');
+const enriched=classify({id:'194-3574',title:'194-3574: Socket Set Metrics',description:'Cat Metric Socket Set (12 Piece)',attributes:{},priceText:'$52.05 USD',fullDescription:'Attributes:\n12 standard length sockets\nCommon 12 point, metric sized sockets\n3/8 inch square drive'});
+assert.deepEqual(enriched.points,['12']);assert.deepEqual(enriched.depth,['Shallow']);assert.deepEqual(enriched.drive,['3/8']);
+assert(matches(enriched,{query:'12 point shallow',drive:['3/8']}));
+assert.deepEqual(sample('Standard Length Socket').depth,['Shallow']);
+assert.deepEqual(sample('12-Point Socket Set',{},'Better grip compared to 6-point sockets.').points,['12'],'Comparisons must not add another point count');
+const tableFilled=classify({id:'200-8415',title:'200-8415: Socket',description:'',attributes:{},catalogSpecification:{drive:'1/4',points:'6',depth:'Shallow',system:'Metric',size:'4 mm',page:64}});
+assert.deepEqual(tableFilled.drive,['1/4']);assert.deepEqual(tableFilled.points,['6']);assert.deepEqual(tableFilled.depth,['Shallow']);assert.equal(tableFilled.size,'4 mm');
+const tableConflict=classify({id:'TEST-1',title:'TEST-1: 6-Point Deep Socket',description:'',attributes:{},catalogSpecification:{drive:'3/8',points:'12',depth:'Shallow',system:'Metric',size:'10 mm',page:65}});
+assert.deepEqual(tableConflict.points,['6']);assert.deepEqual(tableConflict.depth,['Deep']);assert.equal(tableConflict.catalogConflicts.length,2,'Live values must be retained and disagreements surfaced');
+if(fs.existsSync('catalog-specifications.json')){const s=JSON.parse(fs.readFileSync('catalog-specifications.json','utf8'));assert.equal(s['5P-0127'].points,'6');assert.equal(s['5P-0127'].depth,'Deep');assert.equal(s['271-4625'].points,null);assert.equal(s['159-2833'],undefined,'A spline-drive heading must not inherit the previous square-drive value');assert(s['6V-7874'].alternates.some(a=>a.system==='Metric'));}
+assert(matches(sample('Socket'),{drive:['1/4'],includeUnknown:true}));
+assert(!matches(sample('Socket'),{drive:['1/4']}));
+assert(!matches({...a,price:null},{min:0}));
+if(fs.existsSync('catalog.json')){
+  const catalog=JSON.parse(fs.readFileSync('catalog.json','utf8'));
+  assert.equal(catalog.products.length,915);assert.equal(new Set(catalog.products.map(p=>p.id)).size,915);
+  for(const raw of catalog.products){assert.equal(raw.store,'HILLSBORO');const u=new URL(raw.url);assert.equal(u.hostname,'parts.cat.com');assert.equal(u.pathname,'/en/petersonmachinery/product/'+raw.id);const p=classify(raw);assert(p.price===null||Number.isFinite(p.price));}
+  const html=fs.readFileSync('index.html','utf8');assert(!html.includes('__CATALOG_'));const scripts=[...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)];assert.equal(scripts.length,2);new Function(scripts[1][1]);assert(!/https?:\/\/[^" ]+\.(?:js|css)/.test(html),'The page must have no remote dependencies');
+  console.log('Catalog count, unique IDs, source links, branch consistency, offline HTML, JavaScript syntax, and filter classifications verified.');
+}else console.log('Classification and combined-filter checks passed; full catalog validation pending.');

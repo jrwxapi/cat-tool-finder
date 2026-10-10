@@ -1,0 +1,6 @@
+.DS_Store
+node_modules/
+*.log
+catalog-raw.json
+detail-descriptions.json
+cat-hand-tools-2008.pdf
