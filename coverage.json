@@ -20,7 +20,20 @@
     "drive": 741,
     "points": 536,
     "depth": 554,
-    "system": 702
+    "system": 702,
+    "use": 374,
+    "finish": 238
+  },
+  "impactUse": {
+    "Impact": 347,
+    "Hand / non-impact": 27,
+    "Unknown": 541
+  },
+  "finishes": {
+    "Chrome": 117,
+    "Black oxide": 119,
+    "Other finish": 2,
+    "Unknown": 677
   },
   "types": {
     "Adapter": 32,

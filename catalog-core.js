@@ -6,6 +6,18 @@ function normalizeDrive(value) {
   const numbers = {'0.25':'1/4','0.250':'1/4','0.375':'3/8','0.5':'1/2','0.50':'1/2','0.500':'1/2','0.75':'3/4','0.750':'3/4','1.0':'1','1.00':'1','1.5':'1 1/2'};
   return numbers[s] || (DRIVES.includes(s) ? s : null);
 }
+function toolUse(value) {
+  const text=String(value||'');
+  if (/\bnon[- ]impact\b|\bhand[- ](?:use|sockets?)\b|\b(?:not|never)\s+(?:recommended\s+|suitable\s+|rated\s+|designed\s+)?(?:for\s+)?(?:use\s+)?(?:with\s+)?impact\b/i.test(text)) return ['Hand / non-impact'];
+  if (/\bimpact[- ](?:(?:swivel|universal|deep|shallow|standard|metal|lock|removal|square|drive|fractional|metric|6|12|point)[- ]+)*(?:sockets?|extensions?|adapt(?:er|or)s?|drivers?|wrench(?:es)?|rated|use|tools?)\b|\b(?:sockets?|extensions?|adapt(?:er|or)s?)\s*[-,:]\s*impact\b/i.test(text)) return ['Impact'];
+  return [];
+}
+function toolFinish(value, explicitField=false) {
+  const text=String(value||'');
+  if (/\bchrome(?:[- ](?:plated|coated|finish|finished|coating|plating))\b|\bpolished\s+chrome\b|\b(?:finish|coating)\s*:\s*(?:polished\s+)?chrome\b/i.test(text) || (explicitField && /\bchrome\b(?![- ](?:vanadium|molybdenum|alloy))/i.test(text))) return ['Chrome'];
+  if (/\bblack[- ]oxide\b/i.test(text)) return ['Black oxide'];
+  return explicitField && text.trim() ? ['Other finish'] : [];
+}
 function classify(r) {
   const attributes = r.attributes || {};
   const title = r.title.replace(new RegExp('^'+r.id+':\\s*'), '');
@@ -73,6 +85,17 @@ function classify(r) {
     else{const unit=system.has('Metric')?'mm':'in';const value=attributes[`Size (${unit})`]||attributes[`Hex Size (${unit})`];if(value && /^[\d./\s"'−–-]+(?:\s+to\s+[\d./\s"'−–-]+)?$/.test(value))size=value+' '+unit;}
   }
   const catalogFilled=[],catalogConflicts=[];
+  let use=[],finish=[];
+  const useEvidence=[],finishEvidence=[];
+  const useFields=Object.entries(attributes).filter(([k])=>/^(?:tool |socket )?type$|impact|^(?:use|application|usage)$/i.test(k)).map(([k,v])=>[`${k}: ${v}`,`Website ${k}`]);
+  for(const [value,source] of [[title,'Website title'],...useFields,[r.description,'Website summary'],[r.fullDescription,'Website full description']]){
+    const found=toolUse(value);if(found.length){use=found;useEvidence.push(source);break;}
+  }
+  const finishFields=Object.entries(attributes).filter(([k])=>/finish|coating|plating/i.test(k));
+  for(const [k,v] of finishFields){const found=toolFinish(v,true);if(found.length){finish=found;finishEvidence.push(`Website ${k}: ${v}`);break;}}
+  if(!finish.length)for(const [value,source] of [[title,'Website title'],[r.description,'Website summary'],[r.fullDescription,'Website full description']]){
+    const found=toolFinish(value);if(found.length){finish=found;finishEvidence.push(source);break;}
+  }
   const specification=r.catalogSpecification;
   if(specification){
     for(const [key,values,value] of [['drive',drive,specification.drive],['points',points,specification.points],['depth',depth,specification.depth]]){
@@ -84,14 +107,20 @@ function classify(r) {
     if(socketRelated&&!system.size){[specification,...(specification.alternates||[])].forEach(s=>system.add(s.system));catalogFilled.push('system');}
     if(socketRelated&&!size){size=specification.size;catalogFilled.push('size');}
     if(catalogFilled.includes('drive'))evidence.push('2008 Cat catalog, PDF page '+specification.page);
+    const oldUse=toolUse(specification.heading),oldFinish=/\bchrome\b/i.test(specification.heading||'')?['Chrome']:toolFinish(specification.heading);
+    for(const [key,current,old,sourceEvidence] of [['use',use,oldUse,useEvidence],['finish',finish,oldFinish,finishEvidence]]){
+      if(!old.length)continue;
+      if(!current.length){current.push(...old);catalogFilled.push(key);sourceEvidence.push('2008 Cat catalog, PDF page '+specification.page);}
+      else if(!old.every(v=>current.includes(v)))catalogConflicts.push(`${key}: website ${current.join(', ')}; 2008 catalog ${old.join(', ')}`);
+    }
   }
-  return {...r,title,type,points,depth,drive:[...drive].sort((a,b)=>DRIVES.indexOf(a)-DRIVES.indexOf(b)),system:[...system],price,currency:'USD',size,catalogFilled,catalogConflicts,driveEvidence:[...new Set(evidence)],socketRelated,impact:/\bimpact\b/i.test(name),searchText:normalizeSearch([text,type,size,...system,...depth,...points.map(p=>p+' point'),...[...drive].map(d=>d+' drive')].join(' '))};
+  return {...r,title,type,points,depth,drive:[...drive].sort((a,b)=>DRIVES.indexOf(a)-DRIVES.indexOf(b)),system:[...system],use,finish,useEvidence,finishEvidence,price,currency:'USD',size,catalogFilled,catalogConflicts,driveEvidence:[...new Set(evidence)],socketRelated,impact:use.includes('Impact'),searchText:normalizeSearch([text,type,size,...use,...finish,...system,...depth,...points.map(p=>p+' point'),...[...drive].map(d=>d+' drive')].join(' '))};
 }
 function normalizeSearch(s){return String(s).toLowerCase().replace(/(\d)\s*-?\s*point/g,'$1 point').replace(/[®"'′″]/g,'').replace(/[^a-z0-9/ .-]+/g,' ').replace(/\s+/g,' ').trim();}
 function matches(r, filters){
   const words=normalizeSearch(filters.query||'').split(' ').filter(Boolean);
   if(!words.every(w=>r.searchText.includes(w)||r.id.replace(/-/g,'').toLowerCase().includes(w.replace(/-/g,''))))return false;
-  for(const key of ['points','depth','drive','system','type']){
+  for(const key of ['points','depth','drive','system','type','use','finish']){
     const selected=filters[key]||[];if(!selected.length)continue;
     const values=Array.isArray(r[key])?r[key]:[r[key]];
     if(!selected.some(v=>v==='Unknown'?values.length===0:values.includes(v)) && !(filters.includeUnknown&&values.length===0))return false;

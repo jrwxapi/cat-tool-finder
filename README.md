@@ -1,6 +1,6 @@
 # Cat Tool Finder
 
-A portable search tool for the Peterson Cat **Ratchets & Sockets** catalog. Filter by point count (6 or 12), socket depth, drive size, Metric/SAE, tool type, and price. Search by part number or description, sort by price, and export matching results as CSV. Ordering links open the original Cat product pages.
+A portable search tool for the Peterson Cat **Ratchets & Sockets** catalog. Filter by point count (6 or 12), socket depth, drive size, Metric/SAE, tool type, impact use, finish, and price. Search by part number or description, sort by price, and export matching results as CSV. Ordering links open the original Cat product pages.
 
 ![Cat Tool Finder](preview.png)
 
@@ -16,6 +16,8 @@ Multiple choices within a filter match any selected value; different filter grou
 - **913 USD prices**, captured while logged in to **Peterson Hillsboro** on **October 10, 2026**. These are a historical snapshot and may differ from another account, branch, or current price. `385-8586` and `456-2109` had no listed price.
 - **108 full product descriptions**, plus the category listings and their US/metric specification views. Cat denied further detail requests even at one page every 10–15 seconds; collection stopped.
 - Socket tables in the [2008 Cat Shop Supplies and Hand Tools catalog (PECJ0003-01)](https://downloads.ctfassets.net/japba5fc4y8x/10z4rNCa2s5l2eXrKEBEHP/42ff1f3d285f7346364845b21a163a7f/PCC_Tools_and_Supplies_Booklet.pdf) match **448 current part numbers**. Missing fields supplemented from this older source are labeled, and each product links to its source PDF page. Current website values take precedence; disagreements are flagged.
+
+Impact use and finish are separate filters. Impact requires explicit tool-use wording or an impact-socket heading in the older Cat catalog; hand/non-impact requires explicit hand-use or non-impact wording. Chrome finish and black oxide alone do not establish impact suitability. Chrome-molybdenum and chrome-vanadium alloy names do not establish a chrome finish. Missing use/finish values can be supplemented from explicit catalog headings; their source is shown in the product details and CSV export.
 
 Uncaptured or unstated specifications remain **Not stated**. Standard-length sockets map to Shallow; explicit deep/deep-well sockets map to Deep. Drive size is kept separate from fastener size. Catalog footnotes override table headings; an ambiguous table heading that mixes 6- and 12-point parts is not used to assign point counts.
 
